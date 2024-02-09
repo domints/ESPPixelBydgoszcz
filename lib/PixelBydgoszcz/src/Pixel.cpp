@@ -1,5 +1,6 @@
 #include <Pixel.hpp>
 #include <Arduino.h>
+#include <esp_rom_crc.h>
 
 PixelClass::PixelClass(Stream& serial, int txEnPin, int rxEnPin) :
     _serial(&serial),
@@ -10,7 +11,6 @@ PixelClass::PixelClass(Stream& serial, int txEnPin, int rxEnPin) :
     digitalWrite(_txEnPin, LOW);
     pinMode(_rxEnPin, OUTPUT);
     pinMode(_txEnPin, OUTPUT);
-    pinMode(D4, OUTPUT);
 }
 
 void PixelClass::begin() {
@@ -43,8 +43,6 @@ void PixelClass::sendCommand(byte displayNo, char *command) {
     if (displayNo > 7)
         return;
 
-    digitalWrite(D4, HIGH);
-
     sendSpace(false);
     _serial->write('_');
     _serial->write(0x01);
@@ -55,7 +53,25 @@ void PixelClass::sendCommand(byte displayNo, char *command) {
     _serial->write(0x0d);
     _serial->write(0x04);
     endTransmit();
-    digitalWrite(D4, LOW);
+}
+
+void PixelClass::sendCommandWithBuffer(uint8_t displayNo, char *command, uint8_t data[], uint16_t dataLength)
+{
+    if (displayNo > 7)
+        return;
+
+    sendSpace(false);
+    _serial->write('_');
+    _serial->write(0x01);
+    _serial->write('2');
+    _serial->write(displayNo + 0x30);
+    _serial->print(command);
+    _serial->print(' ');
+    _serial->write(data, (size_t)dataLength);
+    _serial->write(0x0a);
+    _serial->write(0x0d);
+    _serial->write(0x04);
+    endTransmit();
 }
 
 size_t PixelClass::readResponse(byte buffer[], uint16_t length, uint32_t timeout) {
@@ -144,6 +160,44 @@ uint8_t PixelClass::readStringCommand(uint8_t displayNo, char *command, char buf
     return errorCode;
 }
 
+uint8_t PixelClass::readGid(uint8_t displayNo, char buffer[], uint16_t length)
+{
+    uint16_t respLen = 0;
+    return readStringCommand(displayNo, "GID", buffer, length, respLen);
+}
+
+uint8_t PixelClass::readDid(uint8_t displayNo, char buffer[], uint16_t length)
+{
+    uint16_t respLen = 0;
+    return readStringCommand(displayNo, "DID", buffer, length, respLen);
+}
+
+uint8_t PixelClass::readFactoryIdentification(uint8_t displayNo, char buffer[], uint16_t length)
+{
+    uint16_t respLen = 0;
+    return readStringCommand(displayNo, "#FI", buffer, length, respLen);
+}
+
+uint8_t PixelClass::getAvailableCommands(uint8_t displayNo, char buffer[], uint16_t length)
+{
+    uint16_t respLen = 0;
+    return readStringCommand(displayNo, "#LC", buffer, length, respLen);
+}
+
+/// @brief Sends provided data block to display
+/// @param displayNo display number
+/// @param buffer data block
+/// @param length length of data
+/// @return display status code (non zero is bad)
+uint8_t PixelClass::displayDataBlock(uint8_t displayNo, uint8_t buffer[], uint16_t length)
+{
+    sendCommandWithBuffer(0, "DDB", buffer, length);
+    uint8_t respBuffer[32];
+    size_t responseLength = readResponse(respBuffer, length + 32);
+    uint16_t responseStart = 0;
+    return checkResponse(respBuffer, responseLength, responseStart);
+}
+
 void PixelClass::beginTransmit()
 {
     digitalWrite(_rxEnPin, HIGH);
@@ -152,6 +206,12 @@ void PixelClass::beginTransmit()
 
 void PixelClass::endTransmit()
 {
+    _serial->flush();
     digitalWrite(_txEnPin, LOW);
     digitalWrite(_rxEnPin, LOW);
+}
+
+uint16_t PixelClass::getCrc(uint8_t buffer[], uint32_t len)
+{
+    return ~esp_rom_crc16_be((uint16_t)~0x0000, buffer, len);
 }

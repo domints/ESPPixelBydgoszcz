@@ -1,20 +1,17 @@
 #include <Arduino.h>
 #include <Pixel.hpp>
-#include <SoftwareSerial.h>
 
-SoftwareSerial pixelSerial(D7, D8);
-PixelClass Pixel(pixelSerial, D6, D5);
+PixelClass Pixel(Serial2, 22, 23);
+
+uint8_t datablock[] = "9E00000105000195000600504961F19797F1F12797C12851285521216211212191510379715522833225122155121321232A131042419338211228212211315133315149970379E21212731212132415122D697314192419158215827A6025A7261151285151233251211131379602241933122421221233222112112223321221242213391420179637324722515116215835C3073C493D3014D390F8D7";
 
 void setup() {
   Serial.begin(115200);
-  pixelSerial.begin(4800, SoftwareSerialConfig::SWSERIAL_8E1);
+  Serial2.begin(4800, SERIAL_8E1, 19, 18);
   Pixel.begin();
-  Serial.println("Sleeping for a moment...");
-  delay(2000);
   Serial.println("Checking GID...");
   char respMsg[2137];
-  uint16_t respMsgLen;
-  uint8_t errCode = Pixel.readStringCommand(0, "GID", respMsg, 2137, respMsgLen);
+  uint8_t errCode = Pixel.displayDataBlock(0, datablock, 317);
   Serial.print("Got response code: ");
   Serial.println(errCode);
   Serial.println(respMsg);
