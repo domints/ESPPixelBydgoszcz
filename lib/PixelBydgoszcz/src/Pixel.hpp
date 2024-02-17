@@ -29,6 +29,8 @@ class PixelClass {
 
         uint8_t displayDataBlock(uint8_t displayNo, uint8_t data[], uint16_t length);
 
+        uint16_t getCrc(uint8_t buffer[], uint32_t len);
+
     private:
         Stream* _serial;
         int _txEnPin;
@@ -37,7 +39,6 @@ class PixelClass {
         void beginTransmit();
         void endTransmit();
 
-        uint16_t getCrc(uint8_t buffer[], uint32_t len);
 };
 
 extern PixelClass Pixel;    

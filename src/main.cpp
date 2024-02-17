@@ -1,20 +1,35 @@
 #include <Arduino.h>
 #include <Pixel.hpp>
+#include <Adafruit_GFX_Pixel.hpp>
+#include <Fonts/FreeSerif9pt7b.h>
+#include <Fonts/FreeMono12pt7b.h>
 
 PixelClass Pixel(Serial2, 22, 23);
-
-uint8_t datablock[] = "9E00000105000195000600504961F19797F1F12797C12851285521216211212191510379715522833225122155121321232A131042419338211228212211315133315149970379E21212731212132415122D697314192419158215827A6025A7261151285151233251211131379602241933122421221233222112112223321221242213391420179637324722515116215835C3073C493D3014D390F8D7";
+Adafruit_Pixel Pixel_GFX(Pixel, 84);
 
 void setup() {
   Serial.begin(115200);
   Serial2.begin(4800, SERIAL_8E1, 19, 18);
   Pixel.begin();
-  Serial.println("Checking GID...");
-  char respMsg[2137];
-  uint8_t errCode = Pixel.displayDataBlock(0, datablock, 317);
+  Serial.println("Sleeping some...");
+  delay(5000);
+  Serial.println("Initializing driver...");
+  Pixel_GFX.init();
+  Serial.println("Drawing line...");
+  Pixel_GFX.setFont(&FreeSerif9pt7b);
+  Pixel_GFX.setCursor(0, 15);
+  Pixel_GFX.print("Test text...");
+  Pixel_GFX.selectBuffer(1);
+  Pixel_GFX.setCursor(0, 15);
+  Pixel_GFX.setFont(&FreeMono12pt7b);
+  Pixel_GFX.print("Let's see this...");
+  uint8_t errCode = Pixel_GFX.commitBufferToPage(0);
   Serial.print("Got response code: ");
   Serial.println(errCode);
-  Serial.println(respMsg);
+  delay(1000);
+  errCode = Pixel_GFX.commitBufferToPage(1);
+  Serial.print("Got response code: ");
+  Serial.println(errCode);
 }
 
 void loop() {
